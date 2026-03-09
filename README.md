@@ -1,94 +1,52 @@
-Задание 1
+# Задание 1: Установка Zabbix Server с веб-интерфейсом
 
-Что нужно сделать:
+## 1. Установка PostgreSQL
 
-    Разверните GitLab локально, используя Vagrantfile и инструкцию, описанные в этом репозитории.
-    Создайте новый проект и пустой репозиторий в нём.
-    Зарегистрируйте gitlab-runner для этого проекта и запустите его в режиме Docker. Раннер можно регистрировать и запускать на той же виртуальной машине, на которой запущен GitLab.
+sudo apt update
+sudo apt install -y postgresql postgresql-contrib
+sudo systemctl enable postgresql
+sudo systemctl start postgresql
+sudo -u postgres psql -c "\du"
 
-В качестве ответа в репозиторий шаблона с решением добавьте скриншоты с настройками раннера в проекте.
+## 2. Создание пользователя и базы данных для Zabbix
 
-# Домашнее задание к занятию "GitHub" - Alex Budrik
+sudo -u postgres createuser --pwprompt zabbix
+sudo -u postgres createdb -O zabbix zabbix
+sudo -u postgres psql -d zabbix -c "ALTER USER zabbix WITH SUPERUSER;"
 
-# Добавляем репозиторий GitLab
-curl -sS https://packages.gitlab.com/install/repositories/gitlab/gitlab-ee/script.deb.sh
+## 3.Установка зависимостей
 
-# Устанавливаем GitLab
-sudo EXTERNAL_URL="http://localhost:8080" apt-get install gitlab-ee -y
+sudo apt install -y \
+    build-essential libpcre3-dev libssl-dev libcurl4-openssl-dev libxml2-dev \
+    libsnmp-dev libevent-dev libssh2-1-dev libmariadb-dev php-cli php-mbstring \
+    php-gd php-bcmath php-xml php-pgsql apache2 wget tar make cmake
 
-# Запускаем:
-sudo gitlab-ctl reconfigure
+## 4.Добавление репозиториев Zabbix и установка Zabbix Server
 
-# Настройка gitlab-runner
-curl -L https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh | sudo bash
-sudo apt install gitlab-runner -y
+wget https://repo.zabbix.com/zabbix/7.0/debian/pool/main/z/zabbix-release/zabbix-release_7.0-1+debian12_all.deb
+sudo dpkg -i zabbix-release_7.0-1+debian12_all.deb
+sudo apt update
+sudo apt install -y zabbix-server-pgsql zabbix-frontend-php zabbix-apache-conf zabbix-agent zabbix-sql-scripts
+5. Настройка конфигурации Zabbix Server
+sudo -u postgres psql -d zabbix -f /usr/share/zabbix-sql-scripts/postgresql/server.sql.gz
+sudo nano /etc/zabbix/zabbix_server.conf
+# Установите правильные параметры:
+# DBName=zabbix
+# DBUser=zabbix
+# DBPassword=<ваш пароль>
 
-# Установка Docker
-sudo apt install -y docker.io
-sudo usermod -aG docker gitlab-runner
+## 6.Запуск и проверка Zabbix Server
+sudo systemctl daemon-reload
+sudo systemctl enable zabbix-server
+sudo systemctl restart zabbix-server
+sudo systemctl status zabbix-server
+sudo systemctl restart apache2
 
-# Регистрация раннера
-Sudo gitlab-runner register
+## 7. Настройка веб-интерфейса
 
-# Создаем .gitlab-ci.yml
-image: alpine:latest
-stages:
-  - test
-test_job:
-  stage: test
-  script:
-    - echo "CI Runner успешно работает"
+браузер: http://10.1.0.1/zabbix/setup.php
+Вход в веб-интерфейс:
+Логин: Admin
+Пароль: zabbix
 
 ![runner](https://github.com/alexbudrik/github-homework/blob/main/screenshots/Screenshot%202026-02-28%20212645.png)
-
-Задание 2
-
-Что нужно сделать:
-
-    Запушьте репозиторий на GitLab, изменив origin. Это изучалось на занятии по Git.
-    Создайте .gitlab-ci.yml, описав в нём все необходимые, на ваш взгляд, этапы.
-
-В качестве ответа в шаблон с решением добавьте:
-
-    файл gitlab-ci.yml для своего проекта или вставьте код в соответствующее поле в шаблоне;
-    скриншоты с успешно собранными сборками.
-
-# origin указывает на локальный GitLab:
-origin  http://localhost:8181/root/sdvps-materials.git
-
-# изменить origin, команда была бы:
-git remote set-url origin http://localhost:8181/root/sdvps-materials.git
-
-# push
-git push -u origin main
-
-# Создать .gitlab-ci.yml
-
-stages:
-  - build
-  - test
-
-variables:
-  DOCKER_DRIVER: overlay2
-
-before_script:
-  - echo "Pipeline started"
-
-build_job:
-  stage: build
-  image: docker:latest
-  services:
-    - docker:dind
-  script:
-    - echo "Building project..."
-    - docker info
-
-test_job:
-  stage: test
-  image: alpine:latest
-  script:
-    - echo "Running tests..."
-    - echo "Tests passed"
-
-
- 
