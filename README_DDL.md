@@ -41,3 +41,8 @@ ALTER USER 'sys_test'@'localhost' IDENTIFIED WITH mysql_native_password BY 'pass
 
 # Задание 2:
 
+Составьте таблицу, используя любой текстовый редактор или Excel, в которой должно быть два столбца: в первом должны быть названия таблиц восстановленной базы, во втором названия первичных ключей этих таблиц.
+
+![sql](https://github.com/alexbudrik/sys-pattern-homework/blob/main/screenshots/SQL-4.png)
+
+
