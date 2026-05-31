@@ -10,7 +10,28 @@
 
 # Задание 2:
 
-Составьте таблицу, используя любой текстовый редактор или Excel, в которой должно быть два столбца: в первом должны быть названия таблиц восстановленной базы, во втором названия первичных ключей этих таблиц.
+Выполните конфигурацию master-slave репликации, примером можно пользоваться из лекции.
 
-![sql](https://github.com/alexbudrik/sys-pattern-homework/blob/main/screenshots/SQL-4.png)
+Master container running
+![sql](https://github.com/alexbudrik/sys-pattern-homework/blob/main/screenshots/SQL-2-1-master.png)
 
+Slave container running
+![sql](https://github.com/alexbudrik/sys-pattern-homework/blob/main/screenshots/SQL-2-1-slave.png)
+
+Master replication status
+![sql](https://github.com/alexbudrik/sys-pattern-homework/blob/main/screenshots/SQL-2-2-master.png)
+
+Replica status
+![sql](https://github.com/alexbudrik/sys-pattern-homework/blob/main/screenshots/SQL-2-2-slave.png)
+
+Create test database on Master
+![sql](https://github.com/alexbudrik/sys-pattern-homework/blob/main/screenshots/SQL-2-3-master.png)
+
+Verify replication on Slave
+![sql](https://github.com/alexbudrik/sys-pattern-homework/blob/main/screenshots/SQL-2-3-slave.png)
+
+Replication of new record
+![sql](https://github.com/alexbudrik/sys-pattern-homework/blob/main/screenshots/SQL-2-4-master.png)
+
+New record appeared on Slave
+![sql](https://github.com/alexbudrik/sys-pattern-homework/blob/main/screenshots/SQL-2-4-slave.png)
