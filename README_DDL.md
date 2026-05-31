@@ -26,9 +26,18 @@ ALTER USER 'sys_test'@'localhost' IDENTIFIED WITH mysql_native_password BY 'pass
 
 ![sql](https://github.com/alexbudrik/sys-pattern-homework/blob/main/screenshots/SQL-3.png)
 
-Результатом работы должны быть скриншоты обозначенных заданий, а также простыня со всеми запросами.
-  
+```
+    # Получить список пользователей
+    SELECT user, host
+    FROM mysql.user;
 
+    # Получить список прав пользователя sys_temp
+    SHOW GRANTS FOR 'sys_temp'@'localhost';
+
+    # Получить список таблиц базы данных
+    USE sakila;
+    SHOW TABLES;
+```
 
 # Задание 2:
 
