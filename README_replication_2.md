@@ -130,29 +130,30 @@ books_shard_3 хранит книги с category_id от 7 и выше.
     v     v     v          v     v     v
     U1    U2    U3         B1    B2    B3
 
-U1 = users с user_id 1–1 000 000
-U2 = users с user_id 1 000 001–2 000 000
-U3 = users с user_id 2 000 001+
+```
+   U1 = users с user_id 1–1 000 000
+   U2 = users с user_id 1 000 001–2 000 000
+   U3 = users с user_id 2 000 001+
 
-B1 = books с category_id 1–3
-B2 = books с category_id 4–6
-B3 = books с category_id 7+
+   B1 = books с category_id 1–3
+   B2 = books с category_id 4–6
+   B3 = books с category_id 7+
 
-stores_db = справочник магазинов
+   stores_db = справочник магазинов
 
-Дополнительно вертикальное разделение можно представить так:
+   Дополнительно вертикальное разделение можно представить так:
 
-USERS:
-users_main      -> user_id, name, email, created_at
-users_private   -> user_id, password_hash, phone, address
+   USERS:
+   users_main      -> user_id, name, email, created_at
+   users_private   -> user_id, password_hash, phone, address
 
-BOOKS:
-books_catalog   -> book_id, title, author, category_id, price
-books_stock     -> book_id, store_id, stock_qty
+   BOOKS:
+   books_catalog   -> book_id, title, author, category_id, price
+   books_stock     -> book_id, store_id, stock_qty
 
-STORES:
-stores_db       -> store_id, store_name, city, address, phone
-
+   STORES:
+   stores_db       -> store_id, store_name, city, address, phone
+```
 Режим работы серверов
 
 Master-сервер:
