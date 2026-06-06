@@ -45,7 +45,7 @@
 pg_dump -U postgres -h localhost -p 5432 -F c -b -v -f /backup/company_db.backup company_db
 ```
 Где:
-
+```
 -U postgres — пользователь PostgreSQL;
 -h localhost — сервер базы данных;
 -p 5432 — порт;
@@ -54,7 +54,7 @@ pg_dump -U postgres -h localhost -p 5432 -F c -b -v -f /backup/company_db.backup
 -v — подробный вывод выполнения;
 -f — путь к файлу резервной копии;
 company_db — имя базы данных.
-
+```
 Для восстановления базы данных используется команда pg_restore.
 
 Пример восстановления:
