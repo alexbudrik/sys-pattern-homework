@@ -32,17 +32,122 @@
 Уровень риска: Критический
 
 
+# Задание 2: 
+Проведите сканирование Metasploitable в режимах SYN, FIN, Xmas, UDP.
+Запишите сеансы сканирования в Wireshark.
+Ответьте на следующие вопросы:
+Чем отличаются эти режимы сканирования с точки зрения сетевого трафика?
+Как отвечает сервер?
+
+Были использованы следующие типы сканирования:
+
+sudo nmap -sS <IP>
+sudo nmap -sF <IP>
+sudo nmap -sX <IP>
+sudo nmap -sU <IP>
+
+где:
+
+-sS — SYN Scan;
+-sF — FIN Scan;
+-sX — Xmas Scan;
+-sU — UDP Scan.
+
+Сетевой трафик анализировался с помощью Wireshark.
+
+Чем отличаются режимы сканирования с точки зрения сетевого трафика?
+1. SYN Scan (-sS)
+
+SYN Scan называют "полуоткрытым" сканированием.
+
+Клиент отправляет TCP-пакет с установленным флагом SYN.
+
+Если порт открыт:
+
+Scanner -> SYN
+Server  -> SYN,ACK
+Scanner -> RST
+
+Полное TCP-соединение не устанавливается.
+
+Если порт закрыт:
+
+Scanner -> SYN
+Server  -> RST,ACK
+
+В Wireshark хорошо видны пакеты SYN, SYN/ACK и RST.
+
+2. FIN Scan (-sF)
+
+Сканер отправляет TCP-пакет только с флагом FIN.
+
+Для открытого порта RFC 793 предписывает не отвечать на такой пакет.
+
+Если порт открыт:
+
+Scanner -> FIN
+Server  -> (нет ответа)
+
+Если порт закрыт:
+
+Scanner -> FIN
+Server  -> RST
+
+В Wireshark видно большое количество FIN-пакетов и ответы RST только от закрытых портов.
+
+3. Xmas Scan (-sX)
+
+Отправляется пакет с флагами:
+
+FIN + PSH + URG
+
+Название Xmas ("рождественская ёлка") связано с тем, что в заголовке TCP одновременно "зажжено" несколько флагов.
+
+Если порт открыт:
+
+Scanner -> FIN,PSH,URG
+Server  -> (нет ответа)
+
+Если порт закрыт:
+
+Scanner -> FIN,PSH,URG
+Server  -> RST
+
+В Wireshark можно увидеть пакет с несколькими установленными TCP-флагами.
+
+4. UDP Scan (-sU)
+
+Для UDP отсутствует процедура установки соединения.
+
+Сканер отправляет UDP-пакет на целевой порт.
+
+Если порт открыт:
+
+Scanner -> UDP
+Server  -> UDP Response (или нет ответа)
+
+Если порт закрыт:
+
+Scanner -> UDP
+Server  -> ICMP Port Unreachable
+
+В Wireshark обычно наблюдаются UDP-пакеты и ICMP-сообщения типа:
+
+Destination Unreachable
+Port Unreachable
+Как отвечает сервер?
+Тип сканирования	Открытый порт	Закрытый порт
+SYN	SYN/ACK	RST/ACK
+FIN	Нет ответа	RST
+Xmas	Нет ответа	RST
+UDP	Ответ UDP или отсутствие ответа	ICMP Port Unreachable
+Вывод
+
+Режимы SYN, FIN и Xmas используют TCP, однако формируют различные TCP-флаги и получают разные ответы от сервера. SYN Scan считается наиболее надёжным способом определения открытых портов, тогда как FIN и Xmas Scan часто применяются для обхода простых межсетевых экранов.
+
+UDP Scan отличается тем, что использует протокол UDP, в котором отсутствует механизм установки соединения. Закрытые UDP-порты обычно отвечают сообщением ICMP Port Unreachable, а открытые порты могут либо отвечать UDP-пакетом, либо не отвечать вовсе.
+
+Анализ трафика в Wireshark показал различия в используемых флагах TCP и характере ответов сервера для каждого режима сканирования.
 
 
-# Задание 2: Установите и запустите memcached.
 
-![cash](https://github.com/alexbudrik/sys-pattern-homework/blob/main/screenshots/cash%20-%201.png)
-
-
-# Задание 3: Удаление по TTL в Memcached.
-
-![cash](https://github.com/alexbudrik/sys-pattern-homework/blob/main/screenshots/cash%20-%202.png)
-
-# Задание 4: Запись данных в Redis.
-
-![cash](https://github.com/alexbudrik/sys-pattern-homework/blob/main/screenshots/cash%20-%203.png)
