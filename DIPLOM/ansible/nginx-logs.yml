@@ -1,0 +1,62 @@
+---
+- name: Configure Nginx logs in Unified Agent
+  hosts: web
+  become: true
+
+  tasks:
+    - name: Add unified_agent user to adm group
+      user:
+        name: unified_agent
+        groups: adm
+        append: true
+
+    - name: Create Unified Agent state directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: unified_agent
+        group: unified_agent
+        mode: "0755"
+      loop:
+        - /var/lib/yandex/unified_agent/nginx-access
+        - /var/lib/yandex/unified_agent/nginx-error
+
+    - name: Configure Nginx log collection
+      copy:
+        dest: /etc/yandex/unified_agent/conf.d/nginx-logs.yml
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          routes:
+            - input:
+                plugin: file_input
+                config:
+                  path: /var/log/nginx/access.log
+                  state_directory: /var/lib/yandex/unified_agent/nginx-access
+              channel:
+                output:
+                  plugin: yc_logs
+                  config:
+                    folder_id: "b1grpp6hsfsu6bqgtiu5"
+                    iam:
+                      cloud_meta: {}
+
+            - input:
+                plugin: file_input
+                config:
+                  path: /var/log/nginx/error.log
+                  state_directory: /var/lib/yandex/unified_agent/nginx-error
+              channel:
+                output:
+                  plugin: yc_logs
+                  config:
+                    folder_id: "b1grpp6hsfsu6bqgtiu5"
+                    iam:
+                      cloud_meta: {}
+
+    - name: Restart Unified Agent
+      systemd:
+        name: unified-agent
+        state: restarted
+        enabled: true
