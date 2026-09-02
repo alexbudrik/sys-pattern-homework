@@ -1,0 +1,86 @@
+---
+- name: Install and configure Elasticsearch
+  hosts: elasticsearch
+  become: true
+
+  tasks:
+    - name: Install prerequisites
+      apt:
+        name:
+          - wget
+          - gnupg
+          - apt-transport-https
+          - ca-certificates
+        state: present
+        update_cache: true
+
+    - name: Download Elastic signing key
+      get_url:
+        url: https://artifacts.elastic.co/GPG-KEY-elasticsearch
+        dest: /tmp/elastic-key
+        mode: "0644"
+
+    - name: Add Elastic signing key
+      shell: |
+        gpg --dearmor < /tmp/elastic-key > /usr/share/keyrings/elasticsearch-keyring.gpg
+      args:
+        creates: /usr/share/keyrings/elasticsearch-keyring.gpg
+
+    - name: Add Elastic repository
+      copy:
+        dest: /etc/apt/sources.list.d/elastic-8.x.list
+        content: |
+          deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] https://artifacts.elastic.co/packages/8.x/apt stable main
+        mode: "0644"
+
+    - name: Update apt cache
+      apt:
+        update_cache: true
+
+    - name: Install Elasticsearch
+      apt:
+        name: elasticsearch
+        state: present
+
+    - name: Configure Elasticsearch network
+      lineinfile:
+        path: /etc/elasticsearch/elasticsearch.yml
+        regexp: '^#?network.host:'
+        line: 'network.host: 0.0.0.0'
+
+    - name: Configure Elasticsearch HTTP port
+      lineinfile:
+        path: /etc/elasticsearch/elasticsearch.yml
+        regexp: '^#?http.port:'
+        line: 'http.port: 9200'
+
+    - name: Configure single node mode
+      lineinfile:
+        path: /etc/elasticsearch/elasticsearch.yml
+        regexp: '^#?discovery.type:'
+        line: 'discovery.type: single-node'
+
+    - name: Remove cluster.initial_master_nodes for single-node mode
+      lineinfile:
+        path: /etc/elasticsearch/elasticsearch.yml
+        regexp: '^cluster\.initial_master_nodes:'
+        state: absent
+
+    - name: Disable Elasticsearch security for diploma environment
+      lineinfile:
+        path: /etc/elasticsearch/elasticsearch.yml
+        regexp: '^xpack.security.enabled:'
+        line: 'xpack.security.enabled: false'
+
+    - name: Ensure security setting exists
+      lineinfile:
+        path: /etc/elasticsearch/elasticsearch.yml
+        line: 'xpack.security.enabled: false'
+        state: present
+
+    - name: Enable and start Elasticsearch
+      systemd:
+        name: elasticsearch
+        enabled: true
+        state: restarted
+        daemon_reload: true

@@ -1,0 +1,50 @@
+---
+- name: Install and configure Kibana
+  hosts: kibana
+  become: true
+
+  vars:
+    kibana_version: "8.19.21"
+    elasticsearch_host: "192.168.20.24"
+
+  tasks:
+    - name: Install Docker
+      apt:
+        name:
+          - docker.io
+        state: present
+        update_cache: true
+
+    - name: Enable and start Docker
+      systemd:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Pull Kibana Docker image
+      command:
+        cmd: "docker pull docker.elastic.co/kibana/kibana:{{ kibana_version }}"
+      register: kibana_pull
+      changed_when: "'Downloaded newer image' in kibana_pull.stdout"
+
+    - name: Remove old Kibana container if present
+      shell: |
+        docker rm -f kibana 2>/dev/null || true
+      changed_when: false
+
+    - name: Start Kibana container
+      command: >
+        docker run -d
+        --name kibana
+        --restart unless-stopped
+        -p 5601:5601
+        -e SERVER_HOST=0.0.0.0
+        -e ELASTICSEARCH_HOSTS=http://{{ elasticsearch_host }}:9200
+        docker.elastic.co/kibana/kibana:{{ kibana_version }}
+
+    - name: Wait for Kibana port
+      wait_for:
+        host: 127.0.0.1
+        port: 5601
+        delay: 10
+        timeout: 180

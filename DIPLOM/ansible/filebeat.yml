@@ -1,0 +1,96 @@
+---
+- name: Install and configure Filebeat
+  hosts: web
+  become: true
+
+  vars:
+    filebeat_version: "8.19.21"
+    elasticsearch_host: "192.168.20.24:9200"
+
+  tasks:
+    - name: Install Docker
+      apt:
+        name:
+          - docker.io
+        state: present
+        update_cache: true
+
+    - name: Enable and start Docker
+      systemd:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Create Filebeat configuration directory
+      file:
+        path: /opt/filebeat
+        state: directory
+        mode: "0755"
+
+    - name: Create Filebeat data directory
+      file:
+        path: /opt/filebeat/data
+        state: directory
+        mode: "0777"
+
+    - name: Configure Filebeat
+      copy:
+        dest: /opt/filebeat/filebeat.yml
+        mode: "0644"
+        content: |
+          filebeat.inputs:
+            - type: filestream
+              id: nginx-access
+              enabled: true
+              paths:
+                - /var/log/nginx/access.log
+
+            - type: filestream
+              id: nginx-error
+              enabled: true
+              paths:
+                - /var/log/nginx/error.log
+
+          processors:
+            - add_host_metadata: ~
+
+          output.elasticsearch:
+            hosts:
+              - "http://{{ elasticsearch_host }}"
+            index: "nginx-diplom-%{+yyyy.MM.dd}"
+
+          setup.ilm.enabled: false
+
+          setup.template.name: "nginx-diplom"
+          setup.template.pattern: "nginx-diplom-*"
+
+    - name: Pull Filebeat Docker image
+      command:
+        cmd: "docker pull elastic/filebeat:{{ filebeat_version }}"
+      register: filebeat_pull
+      changed_when: "'Downloaded newer image' in filebeat_pull.stdout"
+
+    - name: Remove old Filebeat container if present
+      shell: |
+        docker rm -f filebeat 2>/dev/null || true
+      changed_when: false
+
+    - name: Start Filebeat container
+      command: >
+        docker run -d
+        --name filebeat
+        --restart unless-stopped
+        --user root
+        -v /opt/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+        -v /opt/filebeat/data:/usr/share/filebeat/data
+        -v /var/log/nginx:/var/log/nginx:ro
+        elastic/filebeat:{{ filebeat_version }}
+        filebeat -e --strict.perms=false
+
+    - name: Wait for Filebeat to start
+      pause:
+        seconds: 10
+
+    - name: Check Filebeat container
+      command: docker ps --filter name=filebeat
+      changed_when: false

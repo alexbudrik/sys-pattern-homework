@@ -1,0 +1,35 @@
+---
+- name: Install and configure Zabbix Agent
+  hosts: web
+  become: true
+
+  tasks:
+    - name: Install Zabbix Agent
+      apt:
+        name: zabbix-agent
+        state: present
+        update_cache: true
+
+    - name: Configure Zabbix server address
+      lineinfile:
+        path: /etc/zabbix/zabbix_agentd.conf
+        regexp: '^Server='
+        line: 'Server=192.168.10.36'
+
+    - name: Configure active Zabbix server address
+      lineinfile:
+        path: /etc/zabbix/zabbix_agentd.conf
+        regexp: '^ServerActive='
+        line: 'ServerActive=192.168.10.36'
+
+    - name: Configure hostname
+      lineinfile:
+        path: /etc/zabbix/zabbix_agentd.conf
+        regexp: '^Hostname='
+        line: 'Hostname={{ inventory_hostname }}'
+
+    - name: Restart Zabbix Agent
+      systemd:
+        name: zabbix-agent
+        state: restarted
+        enabled: true

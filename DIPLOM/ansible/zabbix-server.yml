@@ -1,0 +1,153 @@
+---
+- name: Install and configure Zabbix Server
+  hosts: zabbix
+  become: true
+
+  vars_files:
+    - vault.yml
+
+  vars:
+    zabbix_db_name: zabbix
+    zabbix_db_user: zabbix
+    zabbix_db_password: "{{ vault_zabbix_db_password }}"
+
+  tasks:
+    - name: Install prerequisite packages
+      apt:
+        name:
+          - wget
+          - gnupg
+          - postgresql
+          - postgresql-contrib
+          - python3-psycopg2
+        state: present
+        update_cache: true
+
+    - name: Download Zabbix repository package
+      get_url:
+        url: https://repo.zabbix.com/zabbix/7.0/ubuntu/pool/main/z/zabbix-release/zabbix-release_latest_7.0+ubuntu22.04_all.deb
+        dest: /tmp/zabbix-release.deb
+        mode: "0644"
+
+    - name: Install Zabbix repository
+      apt:
+        deb: /tmp/zabbix-release.deb
+
+    - name: Update apt cache after adding Zabbix repository
+      apt:
+        update_cache: true
+
+    - name: Install Zabbix packages
+      apt:
+        name:
+          - zabbix-server-pgsql
+          - zabbix-frontend-php
+          - php8.1-pgsql
+          - zabbix-nginx-conf
+          - zabbix-sql-scripts
+          - zabbix-agent
+          - nginx
+          - php8.1-fpm
+        state: present
+
+    - name: Ensure PostgreSQL is running
+      systemd:
+        name: postgresql
+        state: started
+        enabled: true
+
+    - name: Check if Zabbix PostgreSQL user exists
+      shell: |
+        sudo -u postgres psql -tAc \
+        "SELECT 1 FROM pg_roles WHERE rolname='{{ zabbix_db_user }}';"
+      register: zabbix_db_user_exists
+      changed_when: false
+
+    - name: Create Zabbix PostgreSQL user
+      shell: |
+        sudo -u postgres psql -c \
+        "CREATE USER {{ zabbix_db_user }} WITH PASSWORD '{{ zabbix_db_password }}';"
+      when: zabbix_db_user_exists.stdout.strip() != "1"
+
+    - name: Check if Zabbix database exists
+      shell: |
+        sudo -u postgres psql -tAc \
+        "SELECT 1 FROM pg_database WHERE datname='{{ zabbix_db_name }}';"
+      register: zabbix_db_exists
+      changed_when: false
+
+    - name: Create Zabbix database
+      shell: |
+        sudo -u postgres createdb \
+        -O {{ zabbix_db_user }} \
+        {{ zabbix_db_name }}
+      when: zabbix_db_exists.stdout.strip() != "1"
+
+    - name: Check whether Zabbix database schema is already imported
+      shell: |
+        sudo -u postgres psql \
+        -d {{ zabbix_db_name }} \
+        -tAc "SELECT 1 FROM information_schema.tables WHERE table_name='users';"
+      register: zabbix_schema
+      changed_when: false
+
+    - name: Import initial Zabbix database schema
+      shell: |
+        zcat /usr/share/zabbix-sql-scripts/postgresql/server.sql.gz | \
+        sudo -u postgres psql -d {{ zabbix_db_name }}
+      when: zabbix_schema.stdout.strip() != "1"
+
+    - name: Grant Zabbix user permissions on database schema
+      shell: |
+        sudo -u postgres psql -d {{ zabbix_db_name }} -c "
+        GRANT USAGE ON SCHEMA public TO {{ zabbix_db_user }};
+        GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO {{ zabbix_db_user }};
+        GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO {{ zabbix_db_user }};
+        "
+      args:
+        executable: /bin/bash
+
+    - name: Configure Zabbix database password
+      lineinfile:
+        path: /etc/zabbix/zabbix_server.conf
+        regexp: '^#?DBPassword='
+        line: "DBPassword={{ zabbix_db_password }}"
+
+    - name: Configure Zabbix database name
+      lineinfile:
+        path: /etc/zabbix/zabbix_server.conf
+        regexp: '^#?DBName='
+        line: "DBName={{ zabbix_db_name }}"
+
+    - name: Configure Zabbix database user
+      lineinfile:
+        path: /etc/zabbix/zabbix_server.conf
+        regexp: '^#?DBUser='
+        line: "DBUser={{ zabbix_db_user }}"
+
+    - name: Configure Nginx listen port for Zabbix
+      lineinfile:
+        path: /etc/zabbix/nginx.conf
+        regexp: '^\s*#?\s*listen\s+8080;'
+        line: '        listen 80;'
+
+    - name: Configure Zabbix server name in Nginx
+      lineinfile:
+        path: /etc/zabbix/nginx.conf
+        regexp: '^\s*#?\s*server_name'
+        line: '        server_name zabbix.ru-central1.internal;'
+
+    - name: Validate Nginx configuration
+      command: nginx -t
+      changed_when: false
+
+    - name: Restart and enable Zabbix services
+      systemd:
+        name: "{{ item }}"
+        state: restarted
+        enabled: true
+      loop:
+        - zabbix-server
+        - zabbix-agent
+        - nginx
+        - php8.1-fpm

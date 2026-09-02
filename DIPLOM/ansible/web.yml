@@ -4,31 +4,22 @@
   become: true
 
   tasks:
-    - name: Update apt cache
-      apt:
-        update_cache: true
-
-    - name: Install nginx
+    - name: Install Nginx
       apt:
         name: nginx
         state: present
+        update_cache: true
 
-    - name: Create custom nginx page
-      copy:
+    - name: Deploy web page from template
+      template:
+        src: templates/index.html.j2
         dest: /var/www/html/index.html
-        content: |
-          <html>
-          <head>
-            <title>{{ inventory_hostname }}</title>
-          </head>
-          <body>
-            <h1>Hello from {{ inventory_hostname }}</h1>
-            <p>This server is managed by Ansible.</p>
-          </body>
-          </html>
+        owner: root
+        group: root
+        mode: "0644"
 
-    - name: Enable and start nginx
-      service:
+    - name: Ensure Nginx is enabled and running
+      systemd:
         name: nginx
-        state: started
         enabled: true
+        state: started
